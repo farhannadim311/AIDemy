@@ -1,0 +1,10 @@
+*{
+background-color: #f0edec;
+}
+.main__buttons{
+    display: flex;
+    font-size: 10px;
+}
+.quizify{
+    margin-left: 20px;
+}

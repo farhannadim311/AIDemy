@@ -9,6 +9,7 @@
     "permissions" : ["aiLanguageModelOriginTrial", "scripting", "activeTab", "storage"],
     "host_permissions": ["*://www.youtube.com/*"],
     "minimum_chrome_version" : "131",
+    "trial_tokens" : ["AiG1R3AZ/TUYce+zO/qkRHeBWNEd7pH0pkaI9iCQczR3307oRncbXguQVNndrwC/SvBD0J0t9+8N6C5I3Z8bEAwAAABeeyJvcmlnaW4iOiJodHRwczovL2Nocm9tZS1leHRlbnNpb246NDQzIiwiZmVhdHVyZSI6Ikxhbmd1YWdlRGV0ZWN0aW9uQVBJIiwiZXhwaXJ5IjoxNzQ5NTk5OTk5fQ==", "As00jWsL5NlxDVFPwzCs6H/AOF/uErqg7qOaWSc86XMhYw+2syAAUxzIp3acb8rqo+mp3ehq3Ym+eYv90YzMKQIAAABYeyJvcmlnaW4iOiJodHRwczovL2Nocm9tZS1leHRlbnNpb246NDQzIiwiZmVhdHVyZSI6IlRyYW5zbGF0aW9uQVBJIiwiZXhwaXJ5IjoxNzUzMTQyNDAwfQ==", "AiD+IH0DC++9Nb32dxJHW4mVFK4s5+jq9fjwHQyEMdxI+N5A3RjDf8j3zUGVUXBQeghxnXJXht5yyPql2Z/YiQQAAABceyJvcmlnaW4iOiJodHRwczovL2Nocm9tZS1leHRlbnNpb246NDQzIiwiZmVhdHVyZSI6IkFJU3VtbWFyaXphdGlvbkFQSSIsImV4cGlyeSI6MTc1MzE0MjQwMH0="],
     "content_scripts": [
         {
             "matches": ["https://*.youtube.com/*"],
@@ -26,9 +27,9 @@
     ],
     "action": {
         "default_icon": {
-            "16": "assets/rat.png",
-            "24": "assets/rat.png",
-            "32": "assets/rat.png"
+            "16": "assets/cheese.png",
+            "24": "assets/cheese.png",
+            "32": "assets/cheese.png"
         },
         "default_title": "AIDemy",
         "default_popup": "popup.html"
