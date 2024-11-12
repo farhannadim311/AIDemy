@@ -1,16 +1,24 @@
-document.getElementById("summary").addEventListener("click", () => requestContent("summarize"));
-document.getElementById("quizifyButton").addEventListener("click", () => requestContent("quizify"));
-document.getElementById("translateButton").addEventListener("click", () => requestContent("translate"));
-
-function requestContent(action) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.tabs.sendMessage(tabs[0].id, { action: action }, (response) => {
-            displayContent(response.content);
+document.addEventListener("DOMContentLoaded", () => {
+    const summaryButton = document.querySelector(".summary"); // Select the summary button
+    const quizifyButton = document.querySelector(".quizify"); // Select the quizify button
+    
+    if (summaryButton) {
+        summaryButton.addEventListener("click", async () => {
+            console.log("Summary button clicked!");
+            const summary = await summarizeTranscript();  // Ensure this function is defined
+            document.getElementById("summary-output").textContent = summary;  // Update summary-output with the result
         });
-    });
-}
+    } else {
+        console.log("Summary button not found.");
+    }
 
-function displayContent(content) {
-    const contentDiv = document.getElementById("content");
-    contentDiv.innerText = content || "No content available.";
-}
+    // Optionally, handle the quizify button here too
+    if (quizifyButton) {
+        quizifyButton.addEventListener("click", () => {
+            console.log("Quizify button clicked!");
+            // Add any functionality for the quizify button if needed
+        });
+    } else {
+        console.log("Quizify button not found.");
+    }
+});

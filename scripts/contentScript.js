@@ -1,51 +1,102 @@
-// content.js
-function addAIDemyButton() {
-    if (!document.querySelector("#aidemy-button")) {
-        const button = document.createElement("button");
-        button.id = "aidemy-button";
-        button.innerText = "AIDemy";
-        button.style.position = "absolute";
-        button.style.top = "10px";
-        button.style.right = "10px";
-        button.style.zIndex = "1000";
-        button.onclick = showOptions;
-        document.body.appendChild(button);
+console.log("Loaded");
+
+let currentVideo = "";
+let subs = "";
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText`;
+
+// Listener for incoming messages
+chrome.runtime.onMessage.addListener((obj, sender, response) => {
+    const { type, videoID } = obj;
+    if (type === "NEW") {
+        currentVideo = videoID;
+        // Fetch transcript and store it in `subs`
+        YoutubeTranscript.fetchTranscript(videoID)
+            .then(transcriptData => {
+                // Extract only the text from each entry and join into a single string
+                subs = transcriptData.map(entry => entry.text).join(" ");
+                console.log("Transcript fetched:", subs);  // Output the concatenated transcript text
+
+                // Store transcript in Chrome storage for later retrieval
+                chrome.storage.sync.set({ [currentVideo]: subs });
+            })
+            .catch(error => {
+                console.error("Error fetching transcript:", error);
+            });
     }
-}
+});
 
-function showOptions() {
-    const options = prompt("Choose an option: Summarise, Quizify, Translate").toLowerCase();
-    if (options === "summarise") summarizeTranscript();
-    else if (options === "quizify") quizifyTranscript();
-    else if (options === "translate") translateTranscript();
-}
+// Function to fetch stored video data from Chrome storage
+const fetchVideo = () => {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get([currentVideo], (obj) => {
+            resolve(obj[currentVideo] || "");  // Return an empty string if no transcript found
+        });
+    });
+};
 
-// Check if the video title contains "Education"
-function checkTitle() {
-    const title = document.title || document.querySelector("h1.title").innerText;
-    if (title && title.toLowerCase().includes("education")) {
-        addAIDemyButton();
-    }
-}
-
-checkTitle();
-async function fetchTranscript() {
-    const videoId = new URLSearchParams(window.location.search).get("v");
-    const response = await fetch(`https://www.youtube.com/api/timedtext?lang=en&v=${videoId}`);
-    const transcriptXML = await response.text();
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(transcriptXML, "text/xml");
-    const transcriptText = Array.from(xmlDoc.getElementsByTagName("text")).map(node => node.textContent).join(" ");
-    return transcriptText;
-}
+// Function to summarize transcript with Vertex AI
 async function summarizeTranscript() {
-    const transcript = await fetchTranscript();
-    // Use OpenAI API to get the summary
-    const summary = await fetchAIService("summarize", transcript);
-    displayResult("Summary", summary);
+    if (!subs || subs === "") {
+        console.error("No transcript available to summarize.");
+        return "No transcript available to summarize.";
+    }
+
+    // Get the API key
+    const apiKey = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ type: "GET_API_KEY" }, (response) => {
+            resolve(response.apiKey || null);
+        });
+    });
+
+    if (!apiKey) {
+        console.error("API key not available.");
+        return "API key not found.";
+    }
+
+    const prompt = "As an expert writer with more than a decade of experience, please summarize the following in under 125 words:\n\n";
+    const req = {
+        prompt: {
+            parts: [`${prompt}${subs}`]
+        },
+        parameters: { maxOutputTokens: 2048, temperature: 0.5, topP: 0.2, topK: 5 }
+    };
+
+    try {
+        const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(req)
+        });
+
+        const data = await response.json();
+        const summary = data?.candidates?.[0]?.output || "No summary generated.";
+        console.log("Summary:", summary);
+        return summary;
+
+    } catch (error) {
+        console.error("Error fetching summary:", error);
+        return "Failed to generate summary.";
+    }
 }
 
-async function quizifyTranscript() {
+// Example of invoking the summarize function correctly
+summarizeTranscript().then(summary => {
+    console.log("Summary generated:", summary);
+});
+
+Document.addEventListener("DOMContentLoaded", () => {
+    const summaryButton = document.getElementsByClassName("summary");
+    if (summaryButton) {
+        summaryButton.addEventListener("click", async () => {
+            console.log("1");
+            const summary = await summarizeTranscript();
+            // Display summary in the popup, e.g., in an element with ID "summary-output"
+            document.getElementById("summary-output").textContent = summary;
+        });
+    }
+});
+
+/*async function quizifyTranscript() {
     const transcript = await fetchTranscript();
     // Use OpenAI API to generate quiz questions
     const quiz = await fetchAIService("quizify", transcript);
@@ -74,7 +125,5 @@ async function fetchAIService(action, text, language = "en") {
     }
     return result;
 }
+    */
 
-function displayResult(title, content) {
-    alert(`${title}:\n${content}`);
-}
