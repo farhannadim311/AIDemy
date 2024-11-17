@@ -1,10 +1,17 @@
-*{
-background-color: #f0edec;
-}
+
 .main__buttons{
     display: flex;
     font-size: 10px;
 }
-.quizify{
-    margin-left: 20px;
+body {
+    width: 400px;
+    height: 300px;
+    overflow: hidden;
+    transition: width 0.3s, height 0.3s;
+}
+
+/* Class to expand the popup */
+body.expanded {
+    width: 600px;
+    height: 800px;
 }
