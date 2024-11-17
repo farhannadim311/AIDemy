@@ -9,45 +9,64 @@ let language = "";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { YoutubeTranscript } from 'youtube-transcript';
 
-const genAI = new GoogleGenerativeAI("API KEY"); // Replace with your API key
+const genAI = new GoogleGenerativeAI("API"); // Replace with your API key
 const generativeModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
 
 // Listener for messages
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    if (request.action === 'getSummary') {
-        // Send the summary
-         language = request.language || 'English';
-        sendResponse({ summary: summary });
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === "NEW") {
+        currentVideo = request.videoID;
+        console.log("Transcript function started");
+        (async () => {
+            try {
+                // Fetch transcript and store it in `subs`
+                const transcriptData = await YoutubeTranscript.fetchTranscript(currentVideo);
+                subs = transcriptData.map(entry => entry.text).join(" ");
+                console.log("Transcript fetched");
+            } catch (error) {
+                console.error("Error fetching transcript or processing:", error);
+                // No need to send a response here as this action is not initiated by the popup
+            }
+        })();
+        return true;
+    } else if (request.action === 'getSummary') {
+        const language = request.language || 'English';
+        // Acknowledge the request
+        sendResponse({ status: "processing" });
+
+        (async () => {
+            try {
+                const summaryText = await summarizeTranscript(language);
+                console.log("Summary generated:", summaryText);
+                // Send the summary back to the popup
+                chrome.runtime.sendMessage({ action: 'summaryReady', summary: summaryText });
+            } catch (error) {
+                console.error("Error generating summary:", error);
+                chrome.runtime.sendMessage({ action: 'summaryError', error: "Error generating summary." });
+            }
+        })();
+        // No need to return true here since we've already sent a response
     } else if (request.action === 'getQuiz') {
-        // Send the quiz
-         language = request.language || 'English';
-        sendResponse({ quiz: quiz });
+        const language = request.language || 'English';
+        // Acknowledge the request
+        sendResponse({ status: "processing" });
+
+        (async () => {
+            try {
+                quizData = await quizifyTranscript(language);
+                console.log("Quiz Generated:", quizData);
+                // Send the quiz back to the popup
+                chrome.runtime.sendMessage({ action: 'quizReady', quiz: quizData });
+            } catch (error) {
+                console.error("Error generating quiz:", error);
+                chrome.runtime.sendMessage({ action: 'quizError', error: "Error generating quiz." });
+            }
+        })();
+        // No need to return true here since we've already sent a response
     } else if (request.action === 'submitQuiz') {
-        // Process the user's answers and send back the results
         const userAnswers = request.userAnswers;
         const results = processQuizAnswers(userAnswers);
         sendResponse({ results: results });
-    } else if (request.type === "NEW") {
-        currentVideo = request.videoID;
-        console.log("Transcript function started");
-        try {
-            // Fetch transcript and store it in `subs`
-            const transcriptData = await YoutubeTranscript.fetchTranscript(currentVideo);
-            subs = transcriptData.map(entry => entry.text).join(" ");
-            console.log("Transcript fetched:", subs);
-
-            // Now that `subs` is populated, call `summarizeTranscript`
-            summary = await summarizeTranscript(language);
-            console.log("Summary generated:", summary);
-
-            // Now, call `quizifyTranscript`
-            quiz = await quizifyTranscript(language);
-            console.log("Quiz Generated:", quiz);
-        } catch (error) {
-            console.error("Error fetching transcript or processing:", error);
-            sendResponse({ error: "Failed to process transcript." });
-        }
-        // We don't need to send a response here as this action is not initiated by the popup
     }
     return true; // Indicate that we will send a response asynchronously
 });
