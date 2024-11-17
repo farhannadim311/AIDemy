@@ -11,42 +11,54 @@ document.addEventListener("DOMContentLoaded", () => {
     if (summaryButton) {
         summaryButton.addEventListener("click", () => {
             const selectedLanguage = languageSelect.value || 'English';
+            outputDiv.innerHTML = "<p>Generating summary... This may take a few moments.</p>";
+
             // Get the active tab
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 const activeTab = tabs[0];
 
-                // Send a message to the content script to get the summary
                 chrome.tabs.sendMessage(activeTab.id, { action: "getSummary", language: selectedLanguage }, (response) => {
-                    console.log("Selected language (popup.js):", selectedLanguage);
                     if (chrome.runtime.lastError) {
                         console.error("Error sending message to content script:", chrome.runtime.lastError);
                         outputDiv.textContent = "An error occurred while retrieving the summary.";
                         return;
                     }
 
-                    if (response && response.summary) {
-                        const formattedSummary = formatSummary(response.summary);
-                        outputDiv.innerHTML = formattedSummary;
+                    if (response && response.status === "processing") {
+                        // Listen for the summaryReady message
+                        const messageListener = (message, sender, sendResponse) => {
+                            if (message.action === 'summaryReady') {
+                                // Remove the listener
+                                chrome.runtime.onMessage.removeListener(messageListener);
+
+                                const formattedSummary = formatSummary(message.summary);
+                                outputDiv.innerHTML = formattedSummary;
+                            } else if (message.action === 'summaryError') {
+                                // Remove the listener
+                                chrome.runtime.onMessage.removeListener(messageListener);
+
+                                outputDiv.textContent = message.error;
+                            }
+                        };
+                        chrome.runtime.onMessage.addListener(messageListener);
                     } else {
-                        outputDiv.textContent = "No summary available. Please refresh the page and try again.";
+                        outputDiv.textContent = "Unexpected response. Please refresh the page and try again.";
                     }
                 });
             });
         });
-    } else {
-        console.error("Summary button not found.");
     }
 
     // Event listener for Quizify button
     if (quizButton) {
         quizButton.addEventListener("click", () => {
             const selectedLanguage = languageSelect.value || 'English';
-             console.log("Selected language (popup.js):", selectedLanguage);
+            outputDiv.innerHTML = "<p>Generating quiz... This may take a few moments.</p>";
+
             // Get the active tab
             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                 const activeTab = tabs[0];
 
-                // Send a message to the content script to get the quiz
                 chrome.tabs.sendMessage(activeTab.id, { action: "getQuiz", language: selectedLanguage }, (response) => {
                     if (chrome.runtime.lastError) {
                         console.error("Error sending message to content script:", chrome.runtime.lastError);
@@ -54,26 +66,30 @@ document.addEventListener("DOMContentLoaded", () => {
                         return;
                     }
 
-                    if (response && response.quiz) {
-                        try {
-                            quizData = response.quiz;
-                            console.log("this is in popup.js");
-                            console.log(quizData);
-                            displayQuiz(quizData.questions);
-                        } catch (e) {
-                            console.error("Error parsing quiz data:", e);
-                            outputDiv.textContent = "An error occurred while processing the quiz.";
-                        }
+                    if (response && response.status === "processing") {
+                        // Listen for the quizReady message
+                        const messageListener = (message, sender, sendResponse) => {
+                            if (message.action === 'quizReady') {
+                                // Remove the listener
+                                chrome.runtime.onMessage.removeListener(messageListener);
+
+                                quizData = message.quiz;
+                                displayQuiz(quizData.questions);
+                            } else if (message.action === 'quizError') {
+                                // Remove the listener
+                                chrome.runtime.onMessage.removeListener(messageListener);
+
+                                outputDiv.textContent = message.error;
+                            }
+                        };
+                        chrome.runtime.onMessage.addListener(messageListener);
                     } else {
-                        outputDiv.textContent = "No quiz available. Please refresh the page and try again.";
+                        outputDiv.textContent = "Unexpected response. Please refresh the page and try again.";
                     }
                 });
             });
         });
-    } else {
-        console.error("Quizify button not found.");
     }
-
 
 
 
